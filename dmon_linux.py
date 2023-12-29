@@ -9,25 +9,48 @@ import json
 import os
 import sys
 
+DMON_CPU = "c_cpu_s"
+DMON_NETRX = "c_netrx_B"
+DMON_NETTX = "c_nettx_B"
+
+NETDEV_VAR = "DM_NET"
+NETDEV_DEFAULT = "eth0"
+
 
 def main():
-    dm_net = os.environ.get("DM_NET", "eth0")
-    clk_tck = os.sysconf("SC_CLK_TCK")
+    netdev = os.environ.get(NETDEV_VAR, NETDEV_DEFAULT)
 
-    base = {}
+    try:
+        metrics = get_metrics(netdev)
+    except Exception as e:
+        metrics = {}
+        raise e from None
+    finally:
+        json.dump(metrics, sys.stdout, separators=(",", ":"))
+        sys.stdout.flush()
 
-    with open(f"/sys/class/net/{dm_net}/statistics/tx_bytes", "rt") as f:
-        base["c_nettx_B"] = int(f.read().strip())
-    with open(f"/sys/class/net/{dm_net}/statistics/rx_bytes", "rt") as f:
-        base["c_netrx_B"] = int(f.read().strip())
+
+def get_metrics(netdev: str) -> dict:
+    # as per proc(5), /proc/stat is in units of USER_HZ, readable from
+    # sysconf(_SC_CLK_TCK)
+    user_hz = os.sysconf("SC_CLK_TCK")
+
+    base_metrics = {}
+
+    with open(f"/sys/class/net/{netdev}/statistics/tx_bytes", "rt") as f:
+        base_metrics[DMON_NETTX] = int(f.read().strip())
+    with open(f"/sys/class/net/{netdev}/statistics/rx_bytes", "rt") as f:
+        base_metrics[DMON_NETRX] = int(f.read().strip())
 
     with open("/proc/stat", "rt") as f:
+        # the first line is always the "cpu" line, the first column is the line
+        # name, the rest are all numbers, in units of USER_HZ ticks; the fourth
+        # number is the ticks spent in the idle task
         fields = [int(column) for column in f.readline().split()[1:]]
         idle, total = fields[3], sum(fields)
-        base["c_cpu_s"] = (total - idle) / clk_tck
+        base_metrics[DMON_CPU] = (total - idle) / user_hz
 
-    json.dump({"base": base}, sys.stdout, separators=(",", ":"))
-    sys.stdout.flush()
+    return {"base": base_metrics}
 
 
 if __name__ == "__main__":
