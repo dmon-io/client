@@ -5,5 +5,4 @@ with the in.dmon.io/{telemetryKey}/{jobName} ingest endpoint.
 
 See: 
 * https://dmon.io
-* https://in.dmon.io/docs (swaggerui docs for the ingest endpoint)
 * https://wiki.dmon.io
