@@ -1,32 +1,33 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+
 # (c)2023-4 Lumeny
 # Licensed under Apache License 2.0. See LICENSE file.
 # a couple of ideas from https://rosettacode.org/wiki/Linux_CPU_utilization#Python
-import json, os
 
-DM_NET = os.environ.get("DM_NET", "eth0")
+import json
+import os
+import sys
 
 
 def main():
-    c_cpu_s = 0
-    c_netrx_B = 0
-    c_nettx_B = 0
+    dm_net = os.environ.get("DM_NET", "eth0")
+    clk_tck = os.sysconf("SC_CLK_TCK")
 
-    output = {"base": {}}
+    base = {}
 
-    with open("/proc/net/dev") as f:
-        for line in f.readlines():
-            fields = line.split()
-            if fields[0] != DM_NET + ":":
-                continue
-            output["base"]["c_netrx_B"] = int(fields[1])
-            output["base"]["c_nettx_B"] = int(fields[9])
+    with open(f"/sys/class/net/{dm_net}/statistics/tx_bytes", "rt") as f:
+        base["c_nettx_B"] = int(f.read().strip())
+    with open(f"/sys/class/net/{dm_net}/statistics/rx_bytes", "rt") as f:
+        base["c_netrx_B"] = int(f.read().strip())
 
-    with open("/proc/stat") as f:
-        fields = [int(column) for column in f.readline().strip().split()[1:]]
+    with open("/proc/stat", "rt") as f:
+        fields = [int(column) for column in f.readline().split()[1:]]
         idle, total = fields[3], sum(fields)
-        output["base"]["c_cpu_s"] = (total - idle) / 100
+        base["c_cpu_s"] = (total - idle) / clk_tck
 
-    print(json.dumps(output))
+    json.dump({"base": base}, sys.stdout, separators=(",", ":"))
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
