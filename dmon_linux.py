@@ -37,10 +37,17 @@ def get_metrics(netdev: str) -> dict:
 
     base_metrics = {}
 
-    with open(f"/sys/class/net/{netdev}/statistics/tx_bytes", "rt") as f:
-        base_metrics[DMON_NETTX] = int(f.read().strip())
-    with open(f"/sys/class/net/{netdev}/statistics/rx_bytes", "rt") as f:
-        base_metrics[DMON_NETRX] = int(f.read().strip())
+    try:
+        with open("/sys/class/net/{}/statistics/rx_bytes".format(netdev), "rt") as f:
+            rx = int(f.read().strip())
+        with open("/sys/class/net/{}/statistics/tx_bytes".format(netdev), "rt") as f:
+            tx = int(f.read().strip())
+    except FileNotFoundError:
+        pass
+    else:
+        # only send rx and tx if we successfully read both
+        base_metrics[DMON_NETRX] = rx
+        base_metrics[DMON_NETTX] = tx
 
     with open("/proc/stat", "rt") as f:
         # the first line is always the "cpu" line, the first column is the line
