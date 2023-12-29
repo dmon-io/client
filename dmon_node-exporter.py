@@ -1,52 +1,77 @@
-import json, os, requests, re, sys
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 
-PROMURL = "http://localhost:9100/metrics"
-PROM_CPU = "node_cpu_seconds_total"
-PROM_NETRX = "node_network_receive_bytes_total"
-PROM_NETTX = "node_network_transmit_bytes_total"
-DM_NET = os.environ.get("DM_NET", "eth0")
+# (c)2023-4 Lumeny
+# Licensed under Apache License 2.0. See LICENSE file.
+
+import json
+import os
+import prometheus_client.parser as promparser
+import requests
+import sys
+
+PROM_CPU = "node_cpu_seconds"
+PROM_NETRX = "node_network_receive_bytes"
+PROM_NETTX = "node_network_transmit_bytes"
+
+DMON_CPU = "c_cpu_s"
+DMON_NETRX = "c_netrx_B"
+DMON_NETTX = "c_nettx_B"
+
+URL_VAR = "DM_METRICS_URL"
+URL_DEFAULT = "http://localhost:9100/metrics"
+NETDEV_VAR = "DM_NET"
+NETDEV_DEFAULT = "eth0"
 
 
 def main():
+    url = os.environ.get(URL_VAR, URL_DEFAULT)
+    netdev = os.environ.get(NETDEV_VAR, NETDEV_DEFAULT)
+
     try:
-        prom_metrics = requests.get(PROMURL)
-        if prom_metrics.status_code != 200:
-            print("{}")  # fix this later so failure doesn't break cron job
-            sys.exit("Unable to get metrics from {}".format(PROMURL))
-    except:
-        print("{}")
-        sys.exit("Unable to get metrics from {}".format(PROMURL))
+        metrics = get_metrics(url, netdev)
+    except Exception as e:
+        metrics = {}
+        raise e from None
+    finally:
+        json.dump(metrics, sys.stdout, separators=(",", ":"))
+        sys.stdout.flush()
 
-    c_cpu_s = 0
-    c_netrx_B = 0
-    c_nettx_B = 0
 
-    for line in prom_metrics.text.splitlines():
-        metric = re.match(r"^([a-zA-Z_:][a-zA-Z0-9_:]*)\{(.+)\}\s(\d.+)$", line)
-        if metric:
-            ### CPU
-            if metric.group(1) == PROM_CPU:
-                # sloppy here but probably mostly works
-                # count everything except mode="idle"
-                if not re.search(r'mode="idle"', metric.group(2)):
-                    c_cpu_s += float(metric.group(3))
-            ### NET
-            if metric.group(1) == PROM_NETRX:
-                if re.search('device="' + DM_NET + '"', metric.group(2)):
-                    c_netrx_B += float(metric.group(3))
-            if metric.group(1) == PROM_NETTX:
-                if re.search('device="' + DM_NET + '"', metric.group(2)):
-                    c_nettx_B += float(metric.group(3))
+def get_metrics(url: str, netdev: str) -> dict:
+    base_metrics = {}
 
-    output = {"base": {}}
-    if c_cpu_s:
-        output["base"]["c_cpu_s"] = c_cpu_s
-    if c_netrx_B:
-        output["base"]["c_netrx_B"] = int(c_netrx_B)
-    if c_nettx_B:
-        output["base"]["c_nettx_B"] = int(c_nettx_B)
+    with requests.get(url, stream=True) as prom_metrics:
+        prom_metrics.raise_for_status()
 
-    print(json.dumps(output))
+        # text_fd_to_metric_families claims to take a TextIO (so, a file-ish) but it
+        # actually takes just an iterable of lines
+        for m in promparser.text_fd_to_metric_families(
+            prom_metrics.iter_lines(decode_unicode=True)
+        ):
+            if m.name == PROM_CPU:
+                cpu_s = 0
+                for s in m.samples:
+                    if s.labels.get("mode", None) == "idle":
+                        continue
+                    cpu_s += s.value
+                base_metrics[DMON_CPU] = cpu_s
+
+            elif m.name == PROM_NETRX:
+                for s in m.samples:
+                    if s.labels.get("device", None) != netdev:
+                        continue
+                    base_metrics[DMON_NETRX] = s.value
+                    break
+
+            elif m.name == PROM_NETTX:
+                for s in m.samples:
+                    if s.labels.get("device", None) != netdev:
+                        continue
+                    base_metrics[DMON_NETTX] = s.value
+                    break
+
+    return {"base": base_metrics}
 
 
 if __name__ == "__main__":
