@@ -1,4 +1,4 @@
-:local telemetryKey Ssc8WBEuf4YNvjnEyMGZgK
+:local telemetryKey YOURKEY
 :local jobName mikrotik-gw
 :local iface ether8
 # utility function because of the wonky way routeros presents "bytes"
