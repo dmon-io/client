@@ -4,12 +4,12 @@
 # (c)2023-4 Lumeny
 # Licensed under Apache License 2.0. See LICENSE file.
 
-import contextlib
+import io
 import json
 import os
 import re
-import requests
 import sys
+import urllib.request
 
 PROM_CPU = "node_cpu_seconds_total"
 PROM_NETRX = "node_network_receive_bytes_total"
@@ -42,12 +42,10 @@ def main():
 def get_metrics(url: str, netdev: str) -> dict:
     base_metrics = {}
 
-    # old requests.Response (ubuntu 16.04's python3-requests) are not context
-    # managers, so we have to wrap it
-    with contextlib.closing(requests.get(url, stream=True)) as prom_metrics:
-        prom_metrics.raise_for_status()
+    with urllib.request.urlopen(url) as prom_metrics:
+        encoding = prom_metrics.info().get_content_charset(failobj="latin-1")
 
-        for l in prom_metrics.iter_lines(decode_unicode=True):
+        for l in io.TextIOWrapper(prom_metrics, encoding=encoding):
             l = l.strip()
             if l == "" or l.startswith("#"):
                 continue
