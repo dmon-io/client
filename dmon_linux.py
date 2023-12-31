@@ -5,9 +5,12 @@
 # Licensed under Apache License 2.0. See LICENSE file.
 # a couple of ideas from https://rosettacode.org/wiki/Linux_CPU_utilization#Python
 
+import argparse
 import json
 import os
 import sys
+import time
+import zlib
 
 DMON_CPU = "c_cpu_s"
 DMON_NETRX = "c_netrx_B"
@@ -16,9 +19,19 @@ DMON_NETTX = "c_nettx_B"
 NETDEV_VAR = "DM_NET"
 NETDEV_DEFAULT = "eth0"
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--cron", action="store_true")
+args = parser.parse_args()
+
 
 def main():
     netdev = os.environ.get(NETDEV_VAR, NETDEV_DEFAULT)
+
+    # this flag staggers the cron by a repeatable amount for a given host
+    # please run with --cron to help ease the :00 second burst on in.dmon.io
+    # the stagger will offset the cron execution for between 5 and 55 seconds
+    if args.cron:
+        time.sleep(cron_stagger(netdev))
 
     try:
         metrics = get_metrics(netdev)
@@ -28,6 +41,16 @@ def main():
     finally:
         json.dump(metrics, sys.stdout, separators=(",", ":"))
         sys.stdout.flush()
+
+
+def cron_stagger(netdev: str) -> int:
+    try:
+        with open("/sys/class/net/{}/address".format(netdev), "rt") as f:
+            mac = f.read().strip()
+            stagger = 5 + zlib.crc32(mac.encode("utf-8")) % 50
+    except:
+        stagger = 15
+    return stagger
 
 
 def get_metrics(netdev: str) -> dict:
