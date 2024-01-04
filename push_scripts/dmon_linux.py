@@ -97,7 +97,8 @@ def get_metrics(netdev: str) -> dict:
                 du_res = shutil.disk_usage(mountpoint)
                 if DMON_DISKFR not in base_metrics:
                     base_metrics[DMON_DISKFR] = {}
-                base_metrics[DMON_DISKFR][mountpoint] = du_res.free / du_res.total
+                # 20 character max for in.dmon.io
+                base_metrics[DMON_DISKFR][mountpoint[:20]] = du_res.free / du_res.total
             except:
                 pass
             entries_sent += 1
