@@ -21,7 +21,7 @@ MAX_DISKFR_ENTRIES = 4  # in.dmon.io will reject more than this
 
 NETDEV_VAR = "DM_NET"
 NETDEV_DEFAULT = "eth0"
-REPORTED_FS = ["ext2", "ext3", "ext4", "xfs", "zfs"]
+REPORTED_FS = ["btrfs", "ext2", "ext3", "ext4", "xfs", "zfs"]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--cron", action="store_true")
