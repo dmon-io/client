@@ -8,7 +8,6 @@
 import argparse
 import json
 import os
-import shutil
 import sys
 import time
 import zlib
@@ -16,12 +15,9 @@ import zlib
 DMON_CPU = "c_cpu_s"
 DMON_NETRX = "c_netrx_B"
 DMON_NETTX = "c_nettx_B"
-DMON_DISKFR = "m_g_diskfr_p"
-MAX_DISKFR_ENTRIES = 4  # in.dmon.io will reject more than this
 
 NETDEV_VAR = "DM_NET"
 NETDEV_DEFAULT = "eth0"
-REPORTED_FS = ["ext2", "ext3", "ext4", "xfs", "zfs"]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--cron", action="store_true")
@@ -64,7 +60,6 @@ def get_metrics(netdev: str) -> dict:
 
     base_metrics = {}
 
-    ##### NET metrics
     try:
         with open("/sys/class/net/{}/statistics/rx_bytes".format(netdev), "rt") as f:
             rx = int(f.read().strip())
@@ -77,7 +72,6 @@ def get_metrics(netdev: str) -> dict:
         base_metrics[DMON_NETRX] = rx
         base_metrics[DMON_NETTX] = tx
 
-    ##### CPU metrics
     with open("/proc/stat", "rt") as f:
         # the first line is always the "cpu" line, the first column is the line
         # name, the rest are all numbers, in units of USER_HZ ticks; the fourth
@@ -85,24 +79,6 @@ def get_metrics(netdev: str) -> dict:
         fields = [int(column) for column in f.readline().split()[1:]]
         idle, total = fields[3], sum(fields)
         base_metrics[DMON_CPU] = (total - idle) / user_hz
-
-    ##### DISKFREE metrics
-    with open("/etc/mtab", "rt") as f:
-        entries_sent = 0
-        for line in f:
-            [dev, mountpoint, fstype] = line.split()[:3]
-            if fstype.strip() not in REPORTED_FS:
-                continue
-            try:
-                du_res = shutil.disk_usage(mountpoint)
-                if DMON_DISKFR not in base_metrics:
-                    base_metrics[DMON_DISKFR] = {}
-                base_metrics[DMON_DISKFR][mountpoint] = du_res.free / du_res.total
-            except:
-                pass
-            entries_sent += 1
-            if entries_sent >= MAX_DISKFR_ENTRIES:
-                break
 
     return {"base": base_metrics}
 
