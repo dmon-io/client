@@ -16,7 +16,7 @@ import zlib
 DMON_CPU = "c_cpu_s"
 DMON_NETRX = "c_netrx_B"
 DMON_NETTX = "c_nettx_B"
-DMON_DISKFR = "m_g_diskfr_p"
+DMON_DISKFR = "mg_diskfr_p"
 MAX_DISKFR_ENTRIES = 4  # in.dmon.io will reject more than this
 
 NETDEV_VAR = "DM_NET"
