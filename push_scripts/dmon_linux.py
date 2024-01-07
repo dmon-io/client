@@ -88,7 +88,14 @@ def get_metrics(netdev: str) -> dict:
         base_metrics[DMON_CPU] = (total - idle) / user_hz
 
     ##### DISKFREE metrics
-    with open("/etc/mtab", "rt") as f:
+    # first get the ior,iow stats per major,minor
+    diskstats = {}
+    with open("/proc/diskstats", "rt") as ds:
+        for line in ds:
+            fields = line.split()
+            majorminor = fields[0] + "," + fields[1]
+            diskstats[majorminor] = [int(fields[3]), int(fields[7])]
+    with open("/proc/mounts", "rt") as f:
         entries_sent = 0
         for line in f:
             newdisk = {}
@@ -101,6 +108,14 @@ def get_metrics(netdev: str) -> dict:
                 du_res = shutil.disk_usage(mountpoint)
                 newdisk["sz_B"] = du_res.total
                 newdisk["g_av_B"] = du_res.free
+                # get major,minor and check for disk stats
+                majorminor = (
+                    str(os.major(os.stat(dev).st_rdev))
+                    + ","
+                    + str(os.minor(os.stat(dev).st_rdev))
+                )
+                if majorminor in diskstats:
+                    [newdisk["c_ior"], newdisk["c_iow"]] = diskstats[majorminor]
             except:
                 pass
             disk_metrics.append(newdisk)
