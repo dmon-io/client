@@ -22,13 +22,28 @@ NETDEV_VAR = "DM_NET"
 NETDEV_DEFAULT = "eth0"
 REPORTED_FS = ["btrfs", "ext2", "ext3", "ext4", "xfs", "zfs"]
 
+### only used for --container
+CONTAINER_DIR = "/var/lib/docker/containers"
+CGROUP_DIR = "/sys/fs/cgroup/system.slice/docker-{container}.scope/"
+# CGROUP_DIR = "/sys/fs/cgroup/docker/{container}/"
+# CGROUP_DIR = "/sys/fs/cgroup/memory/docker/{container}/"
+# CGROUP_DIR = "/sys/fs/cgroup/memory/system.slice/docker-{container}.scope/"
+CGROUP_CPU_FILE = "cpu.stat"
+CGROUP_CPU_STAT = "usage_usec"
+CGROUP_CPU_DIV = 1024 * 1024
+
 parser = argparse.ArgumentParser()
+parser.add_argument("--net")
 parser.add_argument("--cron", action="store_true")
+parser.add_argument("--container", action="store_true")
 args = parser.parse_args()
 
 
 def main():
-    netdev = os.environ.get(NETDEV_VAR, NETDEV_DEFAULT)
+    if args.net:
+        netdev = args.net
+    else:
+        netdev = os.environ.get(NETDEV_VAR, NETDEV_DEFAULT)
 
     # this flag staggers the cron by a repeatable amount for a given host
     # please run with --cron to help ease the :00 second burst on in.dmon.io
@@ -38,6 +53,8 @@ def main():
 
     try:
         metrics = get_metrics(netdev)
+        if args.container:
+            metrics["container"] = get_container_metrics()
     except Exception as e:
         metrics = {}
         raise e from None
@@ -130,6 +147,35 @@ def get_metrics(netdev: str) -> dict:
         pass
 
     return {"base": base_metrics, "disk": disk_metrics, "info": info_metrics}
+
+
+def get_container_metrics() -> dict:
+    containers = []
+    count = 0
+    for containerid in os.listdir(CONTAINER_DIR):
+        # currently the script assumes and only works with this structure
+        # will have to get feedback on other needs
+        # tested on ubuntu 22
+        # if any of this fails, just basically skip gracefully
+        try:
+            configv2 = os.path.join(CONTAINER_DIR, containerid) + "/config.v2.json"
+            f = open(configv2, "rt")  # failure wil just except-out here
+            contents = json.load(f)
+            if contents["State"]["Running"] == True:
+                cg = open(CGROUP_DIR.format(container=containerid) + CGROUP_CPU_FILE)
+                cpu_s = 0
+                for line in cg:
+                    if line[0 : len(CGROUP_CPU_STAT)] == CGROUP_CPU_STAT:
+                        cpu_s = float(line.split()[1]) / CGROUP_CPU_DIV
+                        break
+                # if we got this far, add it to the list
+                containers.append({"name": contents["Name"][1:], "cpu_s": cpu_s})
+                count += 1
+        except:
+            pass
+        if count >= 20:
+            break
+    return containers
 
 
 if __name__ == "__main__":
