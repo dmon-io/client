@@ -169,7 +169,7 @@ def get_container_metrics() -> dict:
                         cpu_s = float(line.split()[1]) / CGROUP_CPU_DIV
                         break
                 # if we got this far, add it to the list
-                containers.append({"name": contents["Name"][1:], "cpu_s": cpu_s})
+                containers.append({"name": contents["Name"][1:], "c_cpu_s": cpu_s})
                 count += 1
         except:
             pass
