@@ -31,6 +31,9 @@ CGROUP_DIR = "/sys/fs/cgroup/system.slice/docker-{container}.scope/"
 CGROUP_CPU_FILE = "cpu.stat"
 CGROUP_CPU_STAT = "usage_usec"
 CGROUP_CPU_DIV = 1024 * 1024
+CGROUP_MEM_TOTAL = "memory.current"
+CGROUP_MEM_STAT = "memory.stat"
+CGROUP_MEM_INFILE = "inactive_file"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--net")
@@ -156,22 +159,32 @@ def get_container_metrics() -> dict:
         # currently the script assumes and only works with this structure
         # will have to get feedback on other needs
         # tested on ubuntu 22
-        # if any of this fails, just basically skip gracefully
         try:
             configv2 = os.path.join(CONTAINER_DIR, containerid) + "/config.v2.json"
             f = open(configv2, "rt")  # failure wil just except-out here
             contents = json.load(f)
             if contents["State"]["Running"] == True:
+                # CPU
                 cg = open(CGROUP_DIR.format(container=containerid) + CGROUP_CPU_FILE)
                 cpu_s = 0
                 for line in cg:
                     if line[0 : len(CGROUP_CPU_STAT)] == CGROUP_CPU_STAT:
                         cpu_s = float(line.split()[1]) / CGROUP_CPU_DIV
                         break
+                # MEM
+                tf = open(CGROUP_DIR.format(container=containerid) + CGROUP_MEM_TOTAL)
+                totalmem = float(tf.readline().strip())
+                sf = open(CGROUP_DIR.format(container=containerid) + CGROUP_MEM_STAT)
+                for line in sf:
+                    if line[0 : len(CGROUP_MEM_INFILE)] == CGROUP_MEM_INFILE:
+                        inactive_file = float(line.split()[1]) 
+                        break
+                mem_B = totalmem - inactive_file
                 # if we got this far, add it to the list
-                containers.append({"n": contents["Name"][1:], "c_cpu_s": cpu_s})
+                containers.append({"n": contents["Name"][1:], "c_cpu_s": cpu_s, "g_mem_B": mem_B })
                 count += 1
         except:
+            # if we fail, we fail. Just no container metrics.
             pass
         if count >= 20:
             break
