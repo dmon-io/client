@@ -16,7 +16,7 @@ import urllib.error
 import zlib
 
 parser = argparse.ArgumentParser(description="dmon.io metrics push script")
-parser.add_argument("jobKey", help="jobKey provided by dmon.io")
+parser.add_argument("telemetryKey", help="telemetryKey provided by dmon.io")
 parser.add_argument("jobName", help="job/device name, chosen by user")
 parser.add_argument(
     "--net", default="eth0", help="network device for bandwidth metrics"
@@ -76,7 +76,7 @@ def main():
         else:
             try:
                 req = urllib.request.Request(
-                    "{}/{}/{}".format(DMON_URL, args.jobKey, args.jobName)
+                    "{}/{}/{}".format(DMON_URL, args.telemetryKey, args.jobName)
                 )
                 req.add_header("Content-Type", "application/json")
                 jsondata = json.dumps(metrics)
