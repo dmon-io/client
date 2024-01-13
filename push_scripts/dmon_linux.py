@@ -8,11 +8,31 @@
 import argparse
 import json
 import os
+import requests
 import shutil
 import sys
 import time
 import zlib
 
+parser = argparse.ArgumentParser(description="dmon.io metrics push script")
+parser.add_argument("jobKey", help="jobKey provided by dmon.io")
+parser.add_argument("jobName", help="job/device name, chosen by user")
+parser.add_argument(
+    "--net", default="eth0", help="network device for bandwidth metrics"
+)
+parser.add_argument("--container", action="store_true", help="report container metrics")
+parser.add_argument(
+    "--cron",
+    action="store_true",
+    help="insert fixed cron delay, helpful for in.dmon.io server",
+)
+parser.add_argument(
+    "--stdout", action="store_true", help="output to stdout instead of posting to dmon"
+)
+args = parser.parse_args()
+
+
+DMON_URL = "https://in.dmon.io/"
 DMON_CPU = "c_cpu_s"
 DMON_NETRX = "c_netrx_B"
 DMON_NETTX = "c_nettx_B"
@@ -34,39 +54,31 @@ CGROUP_CPU_DIV = 1024 * 1024
 CGROUP_MEM_TOTAL = "memory.current"
 CGROUP_MEM_STAT = "memory.stat"
 CGROUP_MEM_INFILE = "inactive_file"
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--net")
-parser.add_argument("--cron", action="store_true")
-parser.add_argument("--container", action="store_true")
-args = parser.parse_args()
+MAX_CONTAINER_ENTRIES = 20
 
 
 def main():
-    if args.net:
-        netdev = args.net
-    else:
-        netdev = os.environ.get(NETDEV_VAR, NETDEV_DEFAULT)
-
-    # this flag staggers the cron by a repeatable amount for a given host
-    # please run with --cron to help ease the :00 second burst on in.dmon.io
-    # the stagger will offset the cron execution for between 5 and 55 seconds
-
-    # this was badly done unless we're making making the http call here
-    # making this a very short delay until a real fix is in
-    #if args.cron:
-    #    time.sleep(cron_stagger(netdev))
+    if args.cron:
+        time.sleep(cron_stagger(args.net))
 
     try:
-        metrics = get_metrics(netdev)
+        metrics = get_metrics(args.net)
         if args.container:
             metrics["container"] = get_container_metrics()
     except Exception as e:
         metrics = {}
         raise e from None
     finally:
-        json.dump(metrics, sys.stdout, separators=(",", ":"))
-        sys.stdout.flush()
+        if args.stdout:
+            json.dump(metrics, sys.stdout, separators=(",", ":"))
+            sys.stdout.flush()
+        else:
+            # allow this to raise uncaught exception if error
+            resp = requests.post(
+                "{}/{}/{}".format(DMON_URL, args.key, args.name), json=metrics
+            )
+            if (not args.cron) or resp.status_code != 200:
+                print("{} {}".format(resp.status_code, resp.text.strip()))
 
 
 def cron_stagger(netdev: str) -> int:
@@ -191,7 +203,7 @@ def get_container_metrics() -> dict:
         except:
             # if we fail, we fail. Just no container metrics.
             pass
-        if count >= 20:
+        if count >= MAX_CONTAINER_ENTRIES:
             break
     return containers
 
