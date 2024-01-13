@@ -69,29 +69,31 @@ def main():
     except Exception as e:
         metrics = {}
         raise e from None
-    finally:
-        if args.stdout:
-            json.dump(metrics, sys.stdout, separators=(",", ":"))
-            sys.stdout.flush()
-        else:
-            try:
-                req = urllib.request.Request(
-                    "{}/{}/{}".format(DMON_URL, args.telemetryKey, args.jobName)
-                )
-                req.add_header("Content-Type", "application/json")
-                jsondata = json.dumps(metrics)
-                jsondataasbytes = jsondata.encode("utf-8")
-                with urllib.request.urlopen(req, jsondataasbytes) as resp:
-                    if not args.cron:
-                        print(resp.status, resp.read(16384).decode(errors="replace").strip())
-            except urllib.error.HTTPError as e:
-                if not args.cron:
-                    # first line of body has the relevant error in our case
-                    # this is just informational
-                    print(e.code, e.fp.read(16384).decode(errors="replace").strip())
-            except Exception as e:
-                if not args.cron:
-                    raise e from None
+
+    if args.stdout:
+        json.dump(metrics, sys.stdout, separators=(",", ":"))
+        sys.stdout.flush()
+        # we are done if --stdout
+        return
+
+    try:
+        req = urllib.request.Request(
+            "{}/{}/{}".format(DMON_URL, args.telemetryKey, args.jobName)
+        )
+        req.add_header("Content-Type", "application/json")
+        jsondata = json.dumps(metrics)
+        jsondataasbytes = jsondata.encode("utf-8")
+        with urllib.request.urlopen(req, jsondataasbytes) as resp:
+            if not args.cron:
+                print(resp.status, resp.read(16384).decode(errors="replace").strip())
+    except urllib.error.HTTPError as e:
+        if not args.cron:
+            # first line of body has the relevant error in our case
+            # this is just informational
+            print(e.code, e.fp.read(16384).decode(errors="replace").strip())
+    except Exception as e:
+        if not args.cron:
+            raise e from None
 
 
 def cron_stagger(netdev: str) -> int:
