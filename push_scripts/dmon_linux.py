@@ -8,14 +8,15 @@
 import argparse
 import json
 import os
-import requests
 import shutil
 import sys
 import time
+import urllib.request
+import urllib.error
 import zlib
 
 parser = argparse.ArgumentParser(description="dmon.io metrics push script")
-parser.add_argument("jobKey", help="jobKey provided by dmon.io")
+parser.add_argument("telemetryKey", help="telemetryKey provided by dmon.io")
 parser.add_argument("jobName", help="job/device name, chosen by user")
 parser.add_argument(
     "--net", default="eth0", help="network device for bandwidth metrics"
@@ -68,22 +69,29 @@ def main():
     except Exception as e:
         metrics = {}
         raise e from None
-    finally:
-        if args.stdout:
-            json.dump(metrics, sys.stdout, separators=(",", ":"))
-            sys.stdout.flush()
-        else:
-            try:
-                resp = requests.post(
-                    "{}/{}/{}".format(DMON_URL, args.jobKey, args.jobName), json=metrics
-                )
-                # silence everything if on cron
-                if not args.cron:
-                    print("{} {}".format(resp.status_code, resp.text.strip()))
-            except:
-                # silence everything if on cron
-                if not args.cron:
-                    raise e from None
+
+    if args.stdout:
+        json.dump(metrics, sys.stdout, separators=(",", ":"))
+        sys.stdout.flush()
+        # we are done if --stdout
+        return
+
+    try:
+        req = urllib.request.Request(
+            "{}/{}/{}".format(DMON_URL, args.telemetryKey, args.jobName)
+        )
+        req.add_header("Content-Type", "application/json")
+        jsondata = json.dumps(metrics, separators=(",", ":"))
+        jsondataasbytes = jsondata.encode("utf-8")
+        with urllib.request.urlopen(req, jsondataasbytes) as resp:
+            if not args.cron:
+                print(resp.status, resp.read(16384).decode(errors="replace").strip())
+    except urllib.error.HTTPError as e:
+        if not args.cron:
+            print(e.code, e.fp.read(16384).decode(errors="replace").strip())
+    except Exception as e:
+        if not args.cron:
+            raise e from None
 
 
 def cron_stagger(netdev: str) -> int:
@@ -91,7 +99,7 @@ def cron_stagger(netdev: str) -> int:
         with open("/sys/class/net/{}/address".format(netdev), "rt") as f:
             mac = f.read().strip()
             stagger = 5 + zlib.crc32(mac.encode("utf-8")) % 50
-    except:
+    except Exception as e:
         stagger = 15
     return stagger
 
