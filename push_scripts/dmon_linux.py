@@ -81,9 +81,9 @@ def main():
                 req.add_header("Content-Type", "application/json")
                 jsondata = json.dumps(metrics)
                 jsondataasbytes = jsondata.encode("utf-8")
-                resp = urllib.request.urlopen(req, jsondataasbytes)
-                if not args.cron:
-                    print("{} {}".format(resp.status_code, resp.text.strip()))
+                with urllib.request.urlopen(req, jsondataasbytes) as resp:
+                    if not args.cron:
+                        print("{} {}".format(resp.status_code, resp.text.strip()))
             except urllib.error.HTTPError as e:
                 if not args.cron:
                     # first line of body has the relevant error in our case
