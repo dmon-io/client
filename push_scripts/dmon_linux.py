@@ -81,7 +81,7 @@ def main():
             "{}/{}/{}".format(DMON_URL, args.telemetryKey, args.jobName)
         )
         req.add_header("Content-Type", "application/json")
-        jsondata = json.dumps(metrics)
+        jsondata = json.dumps(metrics, separators=(",", ":"))
         jsondataasbytes = jsondata.encode("utf-8")
         with urllib.request.urlopen(req, jsondataasbytes) as resp:
             if not args.cron:
