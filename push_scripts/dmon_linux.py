@@ -51,11 +51,11 @@ def main():
     # this flag staggers the cron by a repeatable amount for a given host
     # please run with --cron to help ease the :00 second burst on in.dmon.io
     # the stagger will offset the cron execution for between 5 and 55 seconds
-    if args.cron:
-        # this was badly done unless we're making making the http call here
-        # making this a very short delay until a real fix is in
-        # time.sleep(cron_stagger(netdev))
-        time.sleep(3)
+
+    # this was badly done unless we're making making the http call here
+    # making this a very short delay until a real fix is in
+    #if args.cron:
+    #    time.sleep(cron_stagger(netdev))
 
     try:
         metrics = get_metrics(netdev)
