@@ -99,7 +99,7 @@ def cron_stagger(netdev: str) -> int:
         with open("/sys/class/net/{}/address".format(netdev), "rt") as f:
             mac = f.read().strip()
             stagger = 5 + zlib.crc32(mac.encode("utf-8")) % 50
-    except:
+    except Exception as e:
         stagger = 15
     return stagger
 
