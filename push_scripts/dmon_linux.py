@@ -83,13 +83,13 @@ def main():
                 jsondataasbytes = jsondata.encode("utf-8")
                 with urllib.request.urlopen(req, jsondataasbytes) as resp:
                     if not args.cron:
-                        print("{} {}".format(resp.status_code, resp.text.strip()))
+                        print("{} {}".format(resp.status, resp.read().decode().strip()))
             except urllib.error.HTTPError as e:
                 if not args.cron:
                     # first line of body has the relevant error in our case
                     # this is just informational
                     print("{} {}".format(e.code, e.fp.readline().decode().strip()))
-            except:
+            except Exception as e:
                 if not args.cron:
                     raise e from None
 
