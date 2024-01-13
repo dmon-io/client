@@ -24,7 +24,7 @@ parser.add_argument("--container", action="store_true", help="report container m
 parser.add_argument(
     "--cron",
     action="store_true",
-    help="insert fixed cron delay, helpful for in.dmon.io server",
+    help="insert fixed cron delay, helpful for in.dmon.io server. Also silences normal output.",
 )
 parser.add_argument(
     "--stdout", action="store_true", help="output to stdout instead of posting to dmon"
@@ -73,12 +73,17 @@ def main():
             json.dump(metrics, sys.stdout, separators=(",", ":"))
             sys.stdout.flush()
         else:
-            # allow this to raise uncaught exception if error
-            resp = requests.post(
-                "{}/{}/{}".format(DMON_URL, args.jobKey, args.jobName), json=metrics
-            )
-            if (not args.cron) or resp.status_code != 200:
-                print("{} {}".format(resp.status_code, resp.text.strip()))
+            try:
+                resp = requests.post(
+                    "{}/{}/{}".format(DMON_URL, args.jobKey, args.jobName), json=metrics
+                )
+                # silence everything if on cron
+                if not args.cron:
+                    print("{} {}".format(resp.status_code, resp.text.strip()))
+            except:
+                # silence everything if on cron
+                if not args.cron:
+                    raise e from None
 
 
 def cron_stagger(netdev: str) -> int:
