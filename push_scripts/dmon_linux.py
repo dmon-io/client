@@ -8,10 +8,11 @@
 import argparse
 import json
 import os
-import requests
 import shutil
 import sys
 import time
+import urllib.request
+import urllib.error
 import zlib
 
 parser = argparse.ArgumentParser(description="dmon.io metrics push script")
@@ -74,14 +75,21 @@ def main():
             sys.stdout.flush()
         else:
             try:
-                resp = requests.post(
-                    "{}/{}/{}".format(DMON_URL, args.jobKey, args.jobName), json=metrics
+                req = urllib.request.Request(
+                    "{}/{}/{}".format(DMON_URL, args.jobKey, args.jobName)
                 )
-                # silence everything if on cron
+                req.add_header("Content-Type", "application/json")
+                jsondata = json.dumps(metrics)
+                jsondataasbytes = jsondata.encode("utf-8")
+                resp = urllib.request.urlopen(req, jsondataasbytes)
                 if not args.cron:
                     print("{} {}".format(resp.status_code, resp.text.strip()))
+            except urllib.error.HTTPError as e:
+                if not args.cron:
+                    # first line of body has the relevant error in our case
+                    # this is just informational
+                    print("{} {}".format(e.code, e.fp.readline().decode().strip()))
             except:
-                # silence everything if on cron
                 if not args.cron:
                     raise e from None
 
