@@ -88,7 +88,7 @@ def main():
                 if not args.cron:
                     # first line of body has the relevant error in our case
                     # this is just informational
-                    print(e.code, e.fp.readline().decode().strip())
+                    print(e.code, e.fp.read(16384).decode(errors="replace").strip())
             except Exception as e:
                 if not args.cron:
                     raise e from None
