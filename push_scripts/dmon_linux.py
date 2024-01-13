@@ -52,7 +52,10 @@ def main():
     # please run with --cron to help ease the :00 second burst on in.dmon.io
     # the stagger will offset the cron execution for between 5 and 55 seconds
     if args.cron:
-        time.sleep(cron_stagger(netdev))
+        # this was badly done unless we're making making the http call here
+        # making this a very short delay until a real fix is in
+        # time.sleep(cron_stagger(netdev))
+        time.sleep(3)
 
     try:
         metrics = get_metrics(netdev)
@@ -177,11 +180,13 @@ def get_container_metrics() -> dict:
                 sf = open(CGROUP_DIR.format(container=containerid) + CGROUP_MEM_STAT)
                 for line in sf:
                     if line[0 : len(CGROUP_MEM_INFILE)] == CGROUP_MEM_INFILE:
-                        inactive_file = float(line.split()[1]) 
+                        inactive_file = float(line.split()[1])
                         break
                 mem_B = totalmem - inactive_file
                 # if we got this far, add it to the list
-                containers.append({"n": contents["Name"][1:], "c_cpu_s": cpu_s, "g_mem_B": mem_B })
+                containers.append(
+                    {"n": contents["Name"][1:], "c_cpu_s": cpu_s, "g_mem_B": mem_B}
+                )
                 count += 1
         except:
             # if we fail, we fail. Just no container metrics.
