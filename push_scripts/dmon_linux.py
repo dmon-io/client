@@ -75,7 +75,7 @@ def main():
         else:
             # allow this to raise uncaught exception if error
             resp = requests.post(
-                "{}/{}/{}".format(DMON_URL, args.key, args.name), json=metrics
+                "{}/{}/{}".format(DMON_URL, args.jobKey, args.jobName), json=metrics
             )
             if (not args.cron) or resp.status_code != 200:
                 print("{} {}".format(resp.status_code, resp.text.strip()))
