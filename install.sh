@@ -116,6 +116,10 @@ wait_for_user() {
   fi
 }
 
+################### try to figure out default net device
+
+NET=$(ip link show | grep ",UP," | grep -v -E " (veth|br-|dock|lo)" | cut -d ' ' -f 2 | cut -d ':' -f 1 | head -n 1)
+
 ##########################################################################
 #################### actual script
 
@@ -151,15 +155,15 @@ rm -f /tmp/${RAND}-dmon.py
 
 ################### install crontab
 
+NEWCRON="* * * * * ${INSTALL_PATH}/dmon.py --net ${NET} --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
 if [[ ${USER} == "root" ]]
 then
   # is ok to just overwrite this
-  echo "* * * * * daemon ${INSTALL_PATH}/dmon.py --cron ${TELEMETRY_KEY} \"${JOB_NAME}\"" > /etc/cron.d/dmon
+  echo ${NEWCRON} > /etc/cron.d/dmon
 else
   # remove any previous dmon.py entry first, so this automated script only
   # works for one entry for a user
   OLDCRON=$( crontab -l | grep -v "/dmon.py " || true )
-  NEWCRON="* * * * * ${INSTALL_PATH}/dmon.py --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
   (echo ${OLDCRON}; echo ${NEWCRON}) | crontab -
 fi
 
