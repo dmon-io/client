@@ -8,6 +8,7 @@
 # shellcheck disable=SC2312
 
 set -u
+set -e
 
 DMON_PY_URL="https://raw.githubusercontent.com/dmon-io/client/main/dmon.py"
 
