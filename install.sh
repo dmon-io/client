@@ -155,16 +155,16 @@ rm -f /tmp/${RAND}-dmon.py
 
 ################### install crontab
 
-NEWCRON="\* \* \* \* \* ${INSTALL_PATH}/dmon.py --net ${NET} --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
+NEWCRON="* * * * * ${INSTALL_PATH}/dmon.py --net ${NET} --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
 if [[ ${USER} == "root" ]]
 then
   # is ok to just overwrite this
-  echo ${NEWCRON} > /etc/cron.d/dmon
+  echo "${NEWCRON}" > /etc/cron.d/dmon
 else
   # remove any previous dmon.py entry first, so this automated script only
   # works for one entry for a user
   OLDCRON=$( crontab -l | grep -v "/dmon.py " || true )
-  (echo ${OLDCRON}; echo ${NEWCRON}) | crontab -
+  (echo "${OLDCRON}"; echo "${NEWCRON}") | crontab -
 fi
 
 cat <<EOS
