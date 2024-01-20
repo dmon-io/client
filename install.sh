@@ -54,6 +54,45 @@ else
   INSTALL_PATH="~/.local/bin"
 fi
 
+##################t telemetryKey and jobName
+
+check_telemetry_key() {
+  if [[ ${TELEMETRY_KEY} =~ ^[a-zA-Z0-9]{22}$ ]]
+  then
+    return
+  else
+    abort "telemetryKey is invalid. Please verify a correct key from dmon.io."
+  fi
+}
+
+check_job_name() {
+  if [[ ${JOB_NAME} =~ ^[-a-zA-Z0-9()$_=/,.\ ]{1,24}$ ]]
+  then
+    return
+  else
+    abort "jobName is invalid. Must be 1-24 characters of [-a-zA-Z0-9()\$_=/,. ]"
+  fi
+}
+
+if [[ -z "${TELEMETRY_KEY-}" ]]
+then
+  echo ""
+  echo "Please enter telemetryKey as issued on dmon.io/jobs/config"
+  read -p 'telemetryKey: ' TELEMETRY_KEY
+fi
+check_telemetry_key
+
+if [[ -z "${JOB_NAME-}" ]]
+then
+  echo ""
+  echo "Please enter a device name. It must be unique for your dmon.io account"
+  echo "and must be 1-24 characters in [-a-zA-Z0-9()\$_=/,. ]"
+  read -p 'jobName: ' JOB_NAME
+fi
+check_job_name
+
+################### prompt before actually doing anything
+
 getc() {
   local save_state
   save_state="$(/bin/stty -g)"
@@ -76,6 +115,7 @@ wait_for_user() {
 
 ####################################################################### script
 
+echo ""
 echo "This script will install:"
 echo "${INSTALL_PATH}/dmon.py"
 echo "...and will add a crontab entry for: $USER"
@@ -99,6 +139,6 @@ Next steps:
 
 - Wait up to 60 seconds for a check-in
 - Go to https://dmon.io/jobsconfig
-- Click on the "Adoptable" tab and adopt this device, named ${DEVICENAME}
+- Click on the "Adoptable" tab and adopt this device, named "${JOB_NAME}"
 
 EOS
