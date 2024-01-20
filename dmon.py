@@ -13,6 +13,7 @@ import sys
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 import zlib
 
 parser = argparse.ArgumentParser(description="dmon.io metrics push script")
@@ -78,7 +79,9 @@ def main():
 
     try:
         req = urllib.request.Request(
-            "{}/{}/{}".format(DMON_URL, args.telemetryKey, args.jobName)
+            "{}/{}/{}".format(
+                DMON_URL, args.telemetryKey, urllib.parse.quote(args.jobName)
+            )
         )
         req.add_header("Content-Type", "application/json")
         jsondata = json.dumps(metrics, separators=(",", ":"))
