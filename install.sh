@@ -16,9 +16,7 @@ abort() {
   exit 1
 }
 
-# Fail fast with a concise message when not using bash
-# Single brackets are needed here for POSIX compatibility
-# shellcheck disable=SC2292
+# must be bash
 if [ -z "${BASH_VERSION:-}" ]
 then
   abort "Bash is required to interpret this script."
@@ -54,7 +52,7 @@ else
   INSTALL_PATH="~/.local/bin"
 fi
 
-##################t telemetryKey and jobName
+#################### telemetryKey and jobName
 
 check_telemetry_key() {
   if [[ ${TELEMETRY_KEY} =~ ^[a-zA-Z0-9]{22}$ ]]
@@ -91,7 +89,7 @@ then
 fi
 check_job_name
 
-################### prompt before actually doing anything
+#################### prompt before actually doing anything
 
 getc() {
   local save_state
@@ -113,12 +111,18 @@ wait_for_user() {
   fi
 }
 
-####################################################################### script
+##########################################################################
+#################### actual script
 
 echo ""
 echo "This script will install:"
 echo "${INSTALL_PATH}/dmon.py"
-echo "...and will add a crontab entry for: $USER"
+if [[ ${USER} == "root" ]]
+then
+  echo "/etc/cron.d/dmon"
+else
+  echo "...and will add a crontab entry for: $USER"
+fi
 
 wait_for_user
 
@@ -126,15 +130,33 @@ if ! command -v curl >/dev/null
 then
   abort "$(
     cat <<EOABORT
+
 You must install cURL to use this installer.
 EOABORT
   )"
 fi
 
+################### install dmon.py
+
 curl -s "${DMON_PY_URL}" > /tmp/dmon.py
 /usr/bin/install -D -o "${USER}" -g "${GROUP}" -m "0755" /tmp/dmon.py "${INSTALL_PATH}"
 
+
+################### install crontab
+
+if [[ ${USER} == "root" ]]
+then
+  # is ok to just overwrite this
+  echo "* * * * * daemon ${INSTALL_PATH}/dmon.py --cron ${TELEMETRY_KEY} \"${JOB_NAME}\"" > /etc/cron.d/dmon
+else
+  # remove any previous dmon.py entry first, so this automated script only
+  # works for one entry for a user
+  ( (crontab -l | grep -v "/dmon.py "); echo "* * * * * ${INSTALL_PATH}/dmon.py --cron ${TELEMETRY_KEY} \"${JOB_NAME}\"" ) | crontab -
+fi
+
 cat <<EOS
+
+COMPLETE!
 Next steps:
 
 - Wait up to 60 seconds for a check-in
