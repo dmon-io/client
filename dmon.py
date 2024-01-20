@@ -79,7 +79,9 @@ def main():
 
     try:
         req = urllib.request.Request(
-            "{}/{}/{}".format(DMON_URL, args.telemetryKey, urllib.parse.quote(args.jobName))
+            "{}/{}/{}".format(
+                DMON_URL, args.telemetryKey, urllib.parse.quote(args.jobName)
+            )
         )
         req.add_header("Content-Type", "application/json")
         jsondata = json.dumps(metrics, separators=(",", ":"))
