@@ -155,7 +155,7 @@ rm -f /tmp/${RAND}-dmon.py
 
 ################### install crontab
 
-NEWCRON="* * * * * ${INSTALL_PATH}/dmon.py --net ${NET} --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
+NEWCRON="\* \* \* \* \* ${INSTALL_PATH}/dmon.py --net ${NET} --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
 if [[ ${USER} == "root" ]]
 then
   # is ok to just overwrite this
