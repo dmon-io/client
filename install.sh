@@ -17,6 +17,10 @@ abort() {
   exit 1
 }
 
+chomp() {
+  printf "%s" "${1/"$'\n'"/}"
+}
+
 # must be bash
 if [ -z "${BASH_VERSION:-}" ]
 then
@@ -50,7 +54,7 @@ then
   INSTALL_PATH="/usr/local/bin"
 else
   GROUP="$(chomp "$(id -g)")"
-  INSTALL_PATH="~/.local/bin"
+  INSTALL_PATH="${HOME}/.local/bin"
 fi
 
 #################### telemetryKey and jobName
@@ -139,8 +143,10 @@ fi
 
 ################### install dmon.py
 
-curl -s "${DMON_PY_URL}" > /tmp/dmon.py
-/usr/bin/install -D -o "${USER}" -g "${GROUP}" -m "0755" /tmp/dmon.py "${INSTALL_PATH}"
+RAND=${RANDOM}
+curl -s "${DMON_PY_URL}" > /tmp/${RAND}-dmon.py
+/usr/bin/install -D -o "${USER}" -g "${GROUP}" -m "0755" /tmp/${RAND}-dmon.py "${INSTALL_PATH}/dmon.py"
+rm -f /tmp/${RAND}-dmon.py
 
 
 ################### install crontab
