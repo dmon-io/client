@@ -158,7 +158,9 @@ then
 else
   # remove any previous dmon.py entry first, so this automated script only
   # works for one entry for a user
-  ( (crontab -l | grep -v "/dmon.py "); echo "* * * * * ${INSTALL_PATH}/dmon.py --cron ${TELEMETRY_KEY} \"${JOB_NAME}\"" ) | crontab -
+  OLDCRON=$( crontab -l | grep -v "/dmon.py " || true )
+  NEWCRON="* * * * * ${INSTALL_PATH}/dmon.py --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
+  (echo ${OLDCRON}; echo ${NEWCRON}) | crontab -
 fi
 
 cat <<EOS
