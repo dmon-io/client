@@ -50,7 +50,7 @@ fi
 # check running as root
 if  [[ "${EUID:-${UID}}" == "0" ]]
 then
-  GROUP="admin"
+  GROUP="daemon"
   INSTALL_PATH="/usr/local/bin"
 else
   GROUP="$(chomp "$(id -g)")"
