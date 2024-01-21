@@ -114,7 +114,7 @@ wait_for_user() {
 
 ################### try to figure out default net device
 
-NET=$(ip link show | grep ",UP," | grep -v -E " (veth|br-|dock|lo)" | cut -d ' ' -f 2 | cut -d ':' -f 1 | head -n 1)
+NET=$(ip -oneline link show up | cut -d ' ' -f 2 | cut -d ':' -f 1 | grep -v -E "^(veth|br-|dock|lo)" | head -n 1)
 
 ##########################################################################
 #################### actual script
