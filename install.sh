@@ -29,13 +29,6 @@ then
   abort 'Bash must not run in POSIX mode. Please unset POSIXLY_CORRECT and try again.'
 fi
 
-# USER isn't always set so provide a fall back for the installer and subprocesses.
-if [[ -z "${USER-}" ]]
-then
-  USER="$(chomp "$(id -un)")"
-  export USER
-fi
-
 # Linux only
 OS="$(uname)"
 if [[ "${OS}" != "Linux" ]]
@@ -43,13 +36,11 @@ then
   abort "dmon.io client installer is only supported on Linux."
 fi
 
-# check running as root
+# check running as root for install path
 if  [[ "${EUID:-${UID}}" == "0" ]]
 then
-  GROUP="daemon"
   INSTALL_PATH="/usr/local/bin"
 else
-  GROUP="$(chomp "$(id -g)")"
   INSTALL_PATH="${HOME}/.local/bin"
 fi
 
@@ -122,7 +113,7 @@ NET=$(ip -oneline link show up | cut -d ' ' -f 2 | cut -d ':' -f 1 | grep -v -E 
 echo ""
 echo "This script will install:"
 echo "${INSTALL_PATH}/dmon.py"
-if [[ ${USER} == "root" ]]
+if [[ "${EUID:-${UID}}" == "0" ]]
 then
   echo "/etc/cron.d/dmon"
 else
@@ -145,13 +136,12 @@ fi
 
 TMPFILE=$(mktemp -t dmon-XXXXXX)
 curl -sSf "${DMON_PY_URL}" > "${TMPFILE}"
-/usr/bin/install -D -o "${USER}" -g "${GROUP}" -m "0755" "${TMPFILE}" "${INSTALL_PATH}/dmon.py"
+/usr/bin/install -D -m "0755" "${TMPFILE}" "${INSTALL_PATH}/dmon.py"
 rm -f "${TMPFILE}"
-
 
 ################### install crontab
 
-if [[ ${USER} == "root" ]]
+if [[ "${EUID:-${UID}}" == "0" ]]
 then
   # is ok to just overwrite this
   NEWCRON="* * * * * daemon ${INSTALL_PATH}/dmon.py --net ${NET} --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
