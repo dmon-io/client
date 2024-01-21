@@ -3,10 +3,6 @@
 # Derived from: 
 # https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
 
-# We don't need return codes for "$(command)", only stdout is needed.
-# Allow `[[ -n "$(command)" ]]`, `func "$(command)"`, pipes, etc.
-# shellcheck disable=SC2312
-
 set -u
 set -e
 
@@ -147,10 +143,10 @@ fi
 
 ################### install dmon.py
 
-RAND=${RANDOM}
-curl -s "${DMON_PY_URL}" > /tmp/${RAND}-dmon.py
-/usr/bin/install -D -o "${USER}" -g "${GROUP}" -m "0755" /tmp/${RAND}-dmon.py "${INSTALL_PATH}/dmon.py"
-rm -f /tmp/${RAND}-dmon.py
+TMPFILE=$(mktemp -t dmon-XXXXXX)
+curl -s "${DMON_PY_URL}" > "${TMPFILE}"
+/usr/bin/install -D -o "${USER}" -g "${GROUP}" -m "0755" "${TMPFILE}" "${INSTALL_PATH}/dmon.py"
+rm -f "${TMPFILE}"
 
 
 ################### install crontab
