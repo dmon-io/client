@@ -144,7 +144,7 @@ fi
 ################### install dmon.py
 
 TMPFILE=$(mktemp -t dmon-XXXXXX)
-curl -s "${DMON_PY_URL}" > "${TMPFILE}"
+curl -sSf "${DMON_PY_URL}" > "${TMPFILE}"
 /usr/bin/install -D -o "${USER}" -g "${GROUP}" -m "0755" "${TMPFILE}" "${INSTALL_PATH}/dmon.py"
 rm -f "${TMPFILE}"
 
