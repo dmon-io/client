@@ -144,7 +144,7 @@ rm -f "${TMPFILE}"
 if [[ "${EUID:-${UID}}" == "0" ]]
 then
   # is ok to just overwrite this
-  NEWCRON="* * * * * daemon ${INSTALL_PATH}/dmon.py --net ${NET} --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
+  NEWCRON="* * * * * root ${INSTALL_PATH}/dmon.py --net ${NET} --cron ${TELEMETRY_KEY} \"${JOB_NAME}\""
   echo "${NEWCRON}" > /etc/cron.d/dmon
 else
   # remove any previous dmon.py entry first, so this automated script only
