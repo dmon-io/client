@@ -29,6 +29,13 @@ parser.add_argument(
     help="insert fixed cron delay, helpful for in.dmon.io server. Also silences normal output.",
 )
 parser.add_argument(
+    "--disk",
+    "-d",
+    action="append",
+    default=[],
+    help="if flag present, only send specified disks. May be used multiple times.",
+)
+parser.add_argument(
     "--stdout", action="store_true", help="output to stdout instead of posting to dmon"
 )
 args = parser.parse_args()
@@ -152,6 +159,9 @@ def get_metrics(netdev: str) -> dict:
             newdisk = {}
             [dev, mountpoint, fstype] = line.split()[:3]
             if fstype.strip() not in REPORTED_FS:
+                continue
+            # only include --disk entries if option is used
+            if (args.disk != []) and (mountpoint not in args.disk):
                 continue
             # 20 character max for in.dmon.io
             newdisk["n"] = mountpoint[:20]
