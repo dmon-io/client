@@ -41,7 +41,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-DMON_URL = "https://in.dmon.io/"
+DMON_URL = "https://in.dmon.io"
 DMON_CPU = "c_cpu_s"
 DMON_NETRX = "c_netrx_B"
 DMON_NETTX = "c_nettx_B"
